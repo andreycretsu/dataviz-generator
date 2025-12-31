@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sankey Diagram Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2d5f3f;
+            --primary-hover: #234a31;
+            --border-color: #e0e0e0;
+            --bg-light: #f5f5f5;
+            --bg-white: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --warning-bg: #fffbea;
+            --warning-border: #f0e68c;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            color: var(--text-primary);
+            background: var(--bg-light);
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: var(--bg-white);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex: 1;
+        }
+
+        .logo {
+            width: 36px;
+            height: 36px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .diagram-title {
+            border: none;
+            font-size: 16px;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 4px;
+            background: transparent;
+            flex: 1;
+            max-width: 500px;
+        }
+
+        .diagram-title:hover {
+            background: var(--bg-light);
+        }
+
+        .diagram-title:focus {
+            outline: 2px solid var(--primary-color);
+            background: var(--bg-white);
+        }
+
+        .header-right {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-white);
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--bg-light);
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .diagram-panel {
+            flex: 1;
+            background: var(--bg-white);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: auto;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 2px;
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .layout-panel {
+            padding: 20px 24px;
+            background: var(--bg-light);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            margin-bottom: 16px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .control-group select,
+        .control-group input[type="number"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .size-inputs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .size-inputs input {
+            width: 80px;
+        }
+
+        .slider {
+            width: calc(100% - 50px);
+            margin-right: 10px;
+        }
+
+        .control-group input[type="range"] + span {
+            display: inline-block;
+            min-width: 30px;
+            text-align: right;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .control-group input[type="color"] {
+            width: 60px;
+            height: 32px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .diagram-container {
+            flex: 1;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+            background: var(--bg-white);
+        }
+
+        #sankey-diagram {
+            width: 100%;
+            height: 100%;
+            min-height: 400px;
+        }
+
+        #sankey-canvas {
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .diagram-info {
+            margin-top: 12px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .balance-warning {
+            background: var(--warning-bg);
+            border: 1px solid var(--warning-border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #856404;
+        }
+
+        .warning-icon {
+            font-size: 18px;
+        }
+
+        .balance-table {
+            border-top: 1px solid var(--border-color);
+            padding: 16px 24px;
+            background: var(--bg-white);
+        }
+
+        .balance-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .balance-table th,
+        .balance-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .balance-table th {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .balance-table td {
+            font-size: 14px;
+        }
+
+        .balance-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-editor-panel {
+            width: 400px;
+            background: var(--bg-white);
+            border-left: 1px solid var(--border-color);
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .data-editor-panel h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow-x: auto;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        #data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #data-table th {
+            background: var(--bg-light);
+            padding: 10px 8px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+        }
+
+        #data-table td {
+            padding: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        #data-table input,
+        #data-table select {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
+        #data-table input:focus,
+        #data-table select:focus {
+            outline: 2px solid var(--primary-color);
+        }
+
+        .delete-btn {
+            background: transparent;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px 8px;
+        }
+
+        .delete-btn:hover {
+            background: #fff0f0;
+            border-radius: 3px;
+        }
+
+        .add-row-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .btn-icon {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-white);
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-icon:hover {
+            background: var(--bg-light);
+        }
+
+        #rows-to-add {
+            width: 60px;
+            padding: 6px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        .add-row-controls span {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .data-notes {
+            margin-top: auto;
+        }
+
+        .data-notes label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .data-notes textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 13px;
+            resize: vertical;
+        }
+
+        .data-notes textarea:focus {
+            outline: 2px solid var(--primary-color);
+        }
+
+        .node rect {
+            cursor: move;
+            fill-opacity: 0.9;
+            shape-rendering: crispEdges;
+        }
+
+        .node text {
+            pointer-events: none;
+            text-shadow: 0 1px 0 #fff;
+            font-size: 11px;
+        }
+
+        .link {
+            fill: none;
+            stroke: #000;
+            stroke-opacity: 0.2;
+        }
+
+        .link:hover {
+            stroke-opacity: 0.4;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .data-editor-panel {
+                width: 100%;
+                max-height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="header-left">
+                <h1 class="logo">S</h1>
+                <input type="text" id="diagram-title" class="diagram-title" value="Example Inc FY24 Income Statement" placeholder="Diagram Title">
+            </div>
+            <div class="header-right">
+                <button id="save-btn" class="btn btn-primary">Save changes</button>
+                <button id="export-svg-btn" class="btn">Export SVG</button>
+                <button id="export-png-btn" class="btn">Export PNG</button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="diagram-panel">
+                <div class="toolbar">
+                    <button class="tab-btn active" data-tab="view">View</button>
+                    <button class="tab-btn" data-tab="layout">Layout</button>
+                </div>
+
+                <div id="layout-panel" class="layout-panel" style="display: none;">
+                    <div class="control-group">
+                        <label>Original size</label>
+                        <select id="size-preset">
+                            <option value="custom">Custom</option>
+                            <option value="1200x800">1200 × 800</option>
+                            <option value="1600x900">1600 × 900</option>
+                            <option value="1920x1080">1920 × 1080</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group size-inputs">
+                        <input type="number" id="canvas-width" value="1200" min="400" max="4000">
+                        <span>×</span>
+                        <input type="number" id="canvas-height" value="800" min="300" max="3000">
+                        <span>px</span>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Rendering mode</label>
+                        <select id="render-mode">
+                            <option value="svg">SVG</option>
+                            <option value="canvas">Canvas</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Node width</label>
+                        <input type="range" id="node-width" min="5" max="50" value="15" class="slider">
+                        <span id="node-width-value">15</span>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Node height</label>
+                        <input type="range" id="node-height" min="5" max="100" value="20" class="slider">
+                        <span id="node-height-value">20</span>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Node spacing</label>
+                        <input type="range" id="node-spacing" min="5" max="100" value="40" class="slider">
+                        <span id="node-spacing-value">40</span>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Background</label>
+                        <input type="color" id="bg-color" value="#ffffff">
+                    </div>
+                </div>
+
+                <div class="diagram-container">
+                    <div id="sankey-diagram"></div>
+                    <canvas id="sankey-canvas" style="display: none;"></canvas>
+                    <p class="diagram-info">Click on any element to edit it</p>
+                </div>
+
+                <div id="balance-warning" class="balance-warning" style="display: none;">
+                    <span class="warning-icon">⚠️</span>
+                    <span>Some nodes are not balanced</span>
+                </div>
+
+                <div class="balance-table">
+                    <table id="balance-table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Total In</th>
+                                <th>Total Out</th>
+                                <th>Difference</th>
+                            </tr>
+                        </thead>
+                        <tbody id="balance-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="data-editor-panel">
+                <h3>Data editor</h3>
+
+                <div class="table-container">
+                    <table id="data-table">
+                        <thead>
+                            <tr>
+                                <th>From</th>
+                                <th>To</th>
+                                <th>Amount, current</th>
+                                <th>Amount, comparison</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="data-tbody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="add-row-controls">
+                    <button id="add-row-btn" class="btn-icon">+ Add</button>
+                    <input type="number" id="rows-to-add" value="1" min="1" max="100">
+                    <span>rows</span>
+                </div>
+
+                <div class="data-notes">
+                    <label>Data source notes</label>
+                    <textarea id="data-notes" placeholder="Add notes about your data source..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12"></script>
+    <script>
+// Sankey Diagram Generator
+class SankeyDiagramGenerator {
+    constructor() {
+        this.data = this.getDefaultData();
+        this.config = {
+            width: 1200,
+            height: 800,
+            nodeWidth: 15,
+            nodePadding: 20,
+            nodeSpacing: 40,
+            backgroundColor: '#ffffff',
+            renderMode: 'svg'
+        };
+
+        this.nodeColors = {};
+        this.colorPalette = [
+            '#8dd3c7', '#ffffb3', '#bebada', '#fb8072', '#80b1d3',
+            '#fdb462', '#b3de69', '#fccde5', '#d9d9d9', '#bc80bd',
+            '#ccebc5', '#ffed6f', '#a6cee3', '#1f78b4', '#b2df8a'
+        ];
+        this.colorIndex = 0;
+
+        this.init();
+    }
+
+    getDefaultData() {
+        return [
+            { from: 'New', to: 'Sourcing', amount: 70, amountComparison: '' },
+            { from: 'Sourcing', to: 'Screening', amount: 40, amountComparison: 45 },
+            { from: 'Sourcing', to: 'Rejected', amount: 15, amountComparison: 15 },
+            { from: 'Screening', to: 'Interviewing', amount: 25, amountComparison: 30 },
+            { from: 'Screening', to: 'Shortlisted (SKIP)', amount: 8, amountComparison: 5 },
+            { from: 'Screening', to: 'Rejected', amount: 7, amountComparison: 10 },
+            { from: 'Interviewing', to: 'Shortlisted', amount: 20, amountComparison: 22 },
+            { from: 'Interviewing', to: 'Offer Extended (SKIP)', amount: 4, amountComparison: 2 },
+            { from: 'Interviewing', to: 'Interviewing (SKIP)', amount: 1, amountComparison: 6 },
+            { from: 'Shortlisted', to: 'Offer Extended', amount: 18, amountComparison: 15 },
+            { from: 'Offer Extended', to: 'Hired', amount: 5, amountComparison: 4 },
+            { from: 'Offer Extended', to: 'Withdrew', amount: 13, amountComparison: 11 },
+            { from: 'Interviewing (SKIP)', to: 'Hired (SKIP)', amount: 1, amountComparison: 1 }
+        ];
+    }
+
+    init() {
+        this.setupEventListeners();
+        this.renderDataTable();
+        this.renderDiagram();
+        this.updateBalanceTable();
+    }
+
+    setupEventListeners() {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                const tab = e.target.dataset.tab;
+                const layoutPanel = document.getElementById('layout-panel');
+                layoutPanel.style.display = tab === 'layout' ? 'block' : 'none';
+            });
+        });
+
+        document.getElementById('canvas-width').addEventListener('change', (e) => {
+            this.config.width = parseInt(e.target.value);
+            this.renderDiagram();
+        });
+
+        document.getElementById('canvas-height').addEventListener('change', (e) => {
+            this.config.height = parseInt(e.target.value);
+            this.renderDiagram();
+        });
+
+        document.getElementById('size-preset').addEventListener('change', (e) => {
+            if (e.target.value !== 'custom') {
+                const [width, height] = e.target.value.split('x').map(Number);
+                this.config.width = width;
+                this.config.height = height;
+                document.getElementById('canvas-width').value = width;
+                document.getElementById('canvas-height').value = height;
+                this.renderDiagram();
+            }
+        });
+
+        document.getElementById('render-mode').addEventListener('change', (e) => {
+            this.config.renderMode = e.target.value;
+            this.renderDiagram();
+        });
+
+        document.getElementById('node-width').addEventListener('input', (e) => {
+            this.config.nodeWidth = parseInt(e.target.value);
+            document.getElementById('node-width-value').textContent = e.target.value;
+            this.renderDiagram();
+        });
+
+        document.getElementById('node-height').addEventListener('input', (e) => {
+            this.config.nodePadding = parseInt(e.target.value);
+            document.getElementById('node-height-value').textContent = e.target.value;
+            this.renderDiagram();
+        });
+
+        document.getElementById('node-spacing').addEventListener('input', (e) => {
+            this.config.nodeSpacing = parseInt(e.target.value);
+            document.getElementById('node-spacing-value').textContent = e.target.value;
+            this.renderDiagram();
+        });
+
+        document.getElementById('bg-color').addEventListener('change', (e) => {
+            this.config.backgroundColor = e.target.value;
+            document.querySelector('.diagram-container').style.backgroundColor = e.target.value;
+        });
+
+        document.getElementById('add-row-btn').addEventListener('click', () => {
+            const count = parseInt(document.getElementById('rows-to-add').value) || 1;
+            for (let i = 0; i < count; i++) {
+                this.data.push({ from: '', to: '', amount: 0, amountComparison: '' });
+            }
+            this.renderDataTable();
+        });
+
+        document.getElementById('export-svg-btn').addEventListener('click', () => this.exportSVG());
+        document.getElementById('export-png-btn').addEventListener('click', () => this.exportPNG());
+        document.getElementById('save-btn').addEventListener('click', () => this.saveData());
+    }
+
+    renderDataTable() {
+        const tbody = document.getElementById('data-tbody');
+        tbody.innerHTML = '';
+
+        this.data.forEach((row, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = \`
+                <td><input type="text" value="\${row.from}" data-index="\${index}" data-field="from"></td>
+                <td><input type="text" value="\${row.to}" data-index="\${index}" data-field="to"></td>
+                <td><input type="number" value="\${row.amount}" data-index="\${index}" data-field="amount" min="0"></td>
+                <td><input type="number" value="\${row.amountComparison || ''}" data-index="\${index}" data-field="amountComparison" min="0"></td>
+                <td><button class="delete-btn" data-index="\${index}">×</button></td>
+            \`;
+            tbody.appendChild(tr);
+        });
+
+        tbody.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                const field = e.target.dataset.field;
+                let value = e.target.value;
+
+                if (field === 'amount' || field === 'amountComparison') {
+                    value = value ? parseFloat(value) : (field === 'amount' ? 0 : '');
+                }
+
+                this.data[index][field] = value;
+                this.renderDiagram();
+                this.updateBalanceTable();
+            });
+        });
+
+        tbody.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                this.data.splice(index, 1);
+                this.renderDataTable();
+                this.renderDiagram();
+                this.updateBalanceTable();
+            });
+        });
+    }
+
+    prepareGraphData() {
+        const nodes = new Map();
+        const links = [];
+        const validData = this.data.filter(d => d.from && d.to && d.amount > 0);
+
+        validData.forEach(d => {
+            if (!nodes.has(d.from)) {
+                nodes.set(d.from, { name: d.from });
+            }
+            if (!nodes.has(d.to)) {
+                nodes.set(d.to, { name: d.to });
+            }
+
+            links.push({
+                source: d.from,
+                target: d.to,
+                value: d.amount
+            });
+        });
+
+        return {
+            nodes: Array.from(nodes.values()),
+            links: links
+        };
+    }
+
+    getNodeColor(nodeName) {
+        if (!this.nodeColors[nodeName]) {
+            this.nodeColors[nodeName] = this.colorPalette[this.colorIndex % this.colorPalette.length];
+            this.colorIndex++;
+        }
+        return this.nodeColors[nodeName];
+    }
+
+    renderDiagram() {
+        if (this.config.renderMode === 'svg') {
+            this.renderSVG();
+        } else {
+            this.renderCanvas();
+        }
+    }
+
+    renderSVG() {
+        const container = document.getElementById('sankey-diagram');
+        const canvas = document.getElementById('sankey-canvas');
+
+        container.style.display = 'block';
+        canvas.style.display = 'none';
+        container.innerHTML = '';
+
+        const graphData = this.prepareGraphData();
+        if (graphData.nodes.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Add data to see the diagram</p>';
+            return;
+        }
+
+        const margin = { top: 20, right: 150, bottom: 20, left: 150 };
+        const width = this.config.width - margin.left - margin.right;
+        const height = this.config.height - margin.top - margin.bottom;
+
+        const svg = d3.select(container)
+            .append('svg')
+            .attr('width', this.config.width)
+            .attr('height', this.config.height)
+            .style('background', this.config.backgroundColor)
+            .style('box-shadow', '0 2px 8px rgba(0,0,0,0.1)');
+
+        const g = svg.append('g')
+            .attr('transform', \`translate(\${margin.left},\${margin.top})\`);
+
+        const sankey = d3.sankey()
+            .nodeId(d => d.name)
+            .nodeWidth(this.config.nodeWidth)
+            .nodePadding(this.config.nodePadding)
+            .nodeAlign(d3.sankeyLeft)
+            .extent([[0, 0], [width, height]]);
+
+        const { nodes, links } = sankey({
+            nodes: graphData.nodes.map(d => Object.assign({}, d)),
+            links: graphData.links.map(d => Object.assign({}, d))
+        });
+
+        const link = g.append('g')
+            .attr('class', 'links')
+            .selectAll('path')
+            .data(links)
+            .enter()
+            .append('path')
+            .attr('d', d3.sankeyLinkHorizontal())
+            .attr('stroke', d => {
+                const sourceColor = this.getNodeColor(d.source.name);
+                return d3.color(sourceColor).copy({ opacity: 0.4 });
+            })
+            .attr('stroke-width', d => Math.max(1, d.width))
+            .attr('fill', 'none')
+            .style('cursor', 'pointer')
+            .on('mouseover', function() {
+                d3.select(this).attr('stroke-opacity', 0.7);
+            })
+            .on('mouseout', function() {
+                d3.select(this).attr('stroke-opacity', 0.4);
+            });
+
+        link.append('title')
+            .text(d => \`\${d.source.name} → \${d.target.name}\\n\${d.value}\`);
+
+        const node = g.append('g')
+            .attr('class', 'nodes')
+            .selectAll('g')
+            .data(nodes)
+            .enter()
+            .append('g')
+            .attr('class', 'node');
+
+        node.append('rect')
+            .attr('x', d => d.x0)
+            .attr('y', d => d.y0)
+            .attr('height', d => d.y1 - d.y0)
+            .attr('width', d => d.x1 - d.x0)
+            .attr('fill', d => this.getNodeColor(d.name))
+            .attr('stroke', '#000')
+            .attr('stroke-width', 0.5)
+            .style('cursor', 'pointer')
+            .on('mouseover', function() {
+                d3.select(this).attr('fill-opacity', 1);
+            })
+            .on('mouseout', function() {
+                d3.select(this).attr('fill-opacity', 0.9);
+            });
+
+        node.append('text')
+            .attr('x', d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+            .attr('y', d => (d.y1 + d.y0) / 2)
+            .attr('dy', '0.35em')
+            .attr('text-anchor', d => d.x0 < width / 2 ? 'start' : 'end')
+            .text(d => d.name)
+            .style('font-size', '12px')
+            .style('font-weight', '500');
+
+        node.append('text')
+            .attr('x', d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+            .attr('y', d => (d.y1 + d.y0) / 2 + 14)
+            .attr('dy', '0.35em')
+            .attr('text-anchor', d => d.x0 < width / 2 ? 'start' : 'end')
+            .text(d => d.value)
+            .style('font-size', '10px')
+            .style('fill', '#666');
+    }
+
+    renderCanvas() {
+        const container = document.getElementById('sankey-diagram');
+        const canvas = document.getElementById('sankey-canvas');
+
+        container.style.display = 'none';
+        canvas.style.display = 'block';
+
+        canvas.width = this.config.width;
+        canvas.height = this.config.height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = this.config.backgroundColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const graphData = this.prepareGraphData();
+        if (graphData.nodes.length === 0) {
+            ctx.fillStyle = '#999';
+            ctx.font = '14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Add data to see the diagram', canvas.width / 2, canvas.height / 2);
+            return;
+        }
+
+        const margin = { top: 20, right: 150, bottom: 20, left: 150 };
+        const width = this.config.width - margin.left - margin.right;
+        const height = this.config.height - margin.top - margin.bottom;
+
+        const sankey = d3.sankey()
+            .nodeId(d => d.name)
+            .nodeWidth(this.config.nodeWidth)
+            .nodePadding(this.config.nodePadding)
+            .nodeAlign(d3.sankeyLeft)
+            .extent([[0, 0], [width, height]]);
+
+        const { nodes, links } = sankey({
+            nodes: graphData.nodes.map(d => Object.assign({}, d)),
+            links: graphData.links.map(d => Object.assign({}, d))
+        });
+
+        ctx.save();
+        ctx.translate(margin.left, margin.top);
+
+        links.forEach(link => {
+            const path = d3.sankeyLinkHorizontal()(link);
+            const sourceColor = this.getNodeColor(link.source.name);
+            ctx.strokeStyle = d3.color(sourceColor).copy({ opacity: 0.4 }).toString();
+            ctx.lineWidth = Math.max(1, link.width);
+            ctx.stroke(new Path2D(path));
+        });
+
+        nodes.forEach(node => {
+            ctx.fillStyle = this.getNodeColor(node.name);
+            ctx.fillRect(node.x0, node.y0, node.x1 - node.x0, node.y1 - node.y0);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(node.x0, node.y0, node.x1 - node.x0, node.y1 - node.y0);
+
+            ctx.fillStyle = '#000';
+            ctx.font = '500 12px sans-serif';
+            ctx.textAlign = node.x0 < width / 2 ? 'left' : 'right';
+            const textX = node.x0 < width / 2 ? node.x1 + 6 : node.x0 - 6;
+            const textY = (node.y1 + node.y0) / 2;
+            ctx.fillText(node.name, textX, textY);
+
+            ctx.fillStyle = '#666';
+            ctx.font = '10px sans-serif';
+            ctx.fillText(node.value, textX, textY + 14);
+        });
+
+        ctx.restore();
+    }
+
+    updateBalanceTable() {
+        const balances = new Map();
+
+        this.data.forEach(d => {
+            if (d.from && d.to && d.amount > 0) {
+                if (!balances.has(d.from)) {
+                    balances.set(d.from, { in: 0, out: 0 });
+                }
+                balances.get(d.from).out += d.amount;
+
+                if (!balances.has(d.to)) {
+                    balances.set(d.to, { in: 0, out: 0 });
+                }
+                balances.get(d.to).in += d.amount;
+            }
+        });
+
+        const unbalanced = [];
+        balances.forEach((value, key) => {
+            const diff = value.in - value.out;
+            if (Math.abs(diff) > 0.01 && value.in > 0 && value.out > 0) {
+                unbalanced.push({ node: key, ...value, diff });
+            }
+        });
+
+        const warning = document.getElementById('balance-warning');
+        warning.style.display = unbalanced.length > 0 ? 'flex' : 'none';
+
+        const tbody = document.getElementById('balance-tbody');
+        tbody.innerHTML = '';
+
+        unbalanced.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = \`
+                <td style="font-weight: 500;">\${item.node}</td>
+                <td>\${item.in.toFixed(0)}</td>
+                <td>\${item.out.toFixed(0)}</td>
+                <td style="color: \${item.diff > 0 ? '#28a745' : '#dc3545'}; font-weight: 500;">
+                    \${item.diff > 0 ? '+' : ''}\${item.diff.toFixed(0)}
+                </td>
+            \`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    exportSVG() {
+        const svgElement = document.querySelector('#sankey-diagram svg');
+        if (!svgElement) {
+            alert('Please switch to SVG rendering mode to export SVG');
+            return;
+        }
+
+        const serializer = new XMLSerializer();
+        const svgString = serializer.serializeToString(svgElement);
+        const blob = new Blob([svgString], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'sankey-diagram.svg';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    exportPNG() {
+        const svgElement = document.querySelector('#sankey-diagram svg');
+        const canvasElement = document.getElementById('sankey-canvas');
+
+        if (this.config.renderMode === 'canvas') {
+            canvasElement.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'sankey-diagram.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        } else if (svgElement) {
+            const serializer = new XMLSerializer();
+            const svgString = serializer.serializeToString(svgElement);
+            const img = new Image();
+
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = this.config.width;
+                canvas.height = this.config.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+
+                canvas.toBlob(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'sankey-diagram.png';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+            };
+
+            const blob = new Blob([svgString], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            img.src = url;
+        }
+    }
+
+    saveData() {
+        const dataStr = JSON.stringify({
+            title: document.getElementById('diagram-title').value,
+            data: this.data,
+            config: this.config,
+            notes: document.getElementById('data-notes').value
+        }, null, 2);
+
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'sankey-data.json';
+        a.click();
+        URL.revokeObjectURL(url);
+
+        const btn = document.getElementById('save-btn');
+        const originalText = btn.textContent;
+        btn.textContent = 'Saved ✓';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 2000);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    window.sankeyApp = new SankeyDiagramGenerator();
+});
+    </script>
+</body>
+</html>
