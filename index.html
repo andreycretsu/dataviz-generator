@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sankey Diagram Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 class="logo">S</h1>
+                <input type="text" id="diagram-title" class="diagram-title" value="Example Inc FY24 Income Statement" placeholder="Diagram Title">
+            </div>
+            <div class="header-right">
+                <button id="save-btn" class="btn btn-primary">Save changes</button>
+                <button id="export-svg-btn" class="btn">Export SVG</button>
+                <button id="export-png-btn" class="btn">Export PNG</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Panel: Canvas/Diagram -->
+            <div class="diagram-panel">
+                <div class="toolbar">
+                    <button class="tab-btn active" data-tab="view">View</button>
+                    <button class="tab-btn" data-tab="layout">Layout</button>
+                </div>
+
+                <!-- Layout Controls Panel -->
+                <div id="layout-panel" class="layout-panel" style="display: none;">
+                    <div class="control-group">
+                        <label>Original size</label>
+                        <select id="size-preset">
+                            <option value="custom">Custom</option>
+                            <option value="1200x800">1200 × 800</option>
+                            <option value="1600x900">1600 × 900</option>
+                            <option value="1920x1080">1920 × 1080</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group size-inputs">
+                        <input type="number" id="canvas-width" value="1200" min="400" max="4000">
+                        <span>×</span>
+                        <input type="number" id="canvas-height" value="800" min="300" max="3000">
+                        <span>px</span>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Rendering mode</label>
+                        <select id="render-mode">
+                            <option value="svg">SVG</option>
+                            <option value="canvas">Canvas</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Node width</label>
+                        <input type="range" id="node-width" min="5" max="50" value="15" class="slider">
+                        <span id="node-width-value">15</span>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Node height</label>
+                        <input type="range" id="node-height" min="5" max="100" value="20" class="slider">
+                        <span id="node-height-value">20</span>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Node spacing</label>
+                        <input type="range" id="node-spacing" min="5" max="100" value="40" class="slider">
+                        <span id="node-spacing-value">40</span>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Background</label>
+                        <input type="color" id="bg-color" value="#ffffff">
+                    </div>
+                </div>
+
+                <!-- Diagram Container -->
+                <div class="diagram-container">
+                    <div id="sankey-diagram"></div>
+                    <canvas id="sankey-canvas" style="display: none;"></canvas>
+                    <p class="diagram-info">Click on any element to edit it</p>
+                </div>
+
+                <!-- Balance Validation -->
+                <div id="balance-warning" class="balance-warning" style="display: none;">
+                    <span class="warning-icon">⚠️</span>
+                    <span>Some nodes are not balanced</span>
+                </div>
+
+                <div class="balance-table">
+                    <table id="balance-table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Total In</th>
+                                <th>Total Out</th>
+                                <th>Difference</th>
+                            </tr>
+                        </thead>
+                        <tbody id="balance-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Right Panel: Data Editor -->
+            <div class="data-editor-panel">
+                <h3>Data editor</h3>
+
+                <div class="table-container">
+                    <table id="data-table">
+                        <thead>
+                            <tr>
+                                <th>From</th>
+                                <th>To</th>
+                                <th>Amount, current</th>
+                                <th>Amount, comparison</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="data-tbody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="add-row-controls">
+                    <button id="add-row-btn" class="btn-icon">+ Add</button>
+                    <input type="number" id="rows-to-add" value="1" min="1" max="100">
+                    <span>rows</span>
+                </div>
+
+                <div class="data-notes">
+                    <label>Data source notes</label>
+                    <textarea id="data-notes" placeholder="Add notes about your data source..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12"></script>
+    <script src="sankey-generator.js"></script>
+</body>
+</html>
