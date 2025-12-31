@@ -4,8 +4,9 @@
   "description": "Interactive Sankey diagram generator with D3.js supporting SVG and Canvas rendering",
   "main": "index.html",
   "scripts": {
-    "start": "npx http-server -p 8080 -o",
-    "dev": "npx http-server -p 8080"
+    "start": "npx http-server -p 8080 -a localhost",
+    "dev": "npx http-server -p 8080 -a localhost",
+    "serve": "python3 -m http.server 8080"
   },
   "keywords": [
     "sankey",
